@@ -95,8 +95,12 @@ $('btnScreen').onclick = async () => {
   try {
     if (sharing) { await room.localParticipant.setScreenShareEnabled(false); sharing = false; setBtn('btnScreen', false); return; }
     const p = PRESETS[$('quality').value];
+    const withAudio = $('shareAudio').checked;
     await room.localParticipant.setScreenShareEnabled(true, {
-      audio: true,
+      // restrictOwnAudio: tira da captura o som da própria live (as vozes dos outros), evitando eco/retorno
+      audio: withAudio ? { restrictOwnAudio: true, autoGainControl: false, noiseSuppression: false } : false,
+      systemAudio: withAudio ? 'include' : 'exclude',
+      suppressLocalAudioPlayback: true,
       resolution: { width: p.w, height: p.h, frameRate: p.fps },
       contentHint: p.hint,
       // Sem simulcast: um único fluxo na qualidade escolhida (menos CPU para quem transmite)

@@ -94,3 +94,6 @@ li.speaking .av{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ok)}
   #btnCopy span{display:none}
 }
 #joinForm.busy{opacity:.55;pointer-events:none}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--acc);padding:0}
+@media(max-width:760px){.chk span{display:none}}
