@@ -19,6 +19,20 @@ let clientId = sessionStorage.getItem('live:cid');
 if (!clientId) { clientId = [...crypto.getRandomValues(new Uint8Array(6))].map((b) => b.toString(16).padStart(2, '0')).join(''); sessionStorage.setItem('live:cid', clientId); }
 let sharing = false;
 
+// Abas do mesmo navegador/computador na mesma sala: uma não toca o som da outra
+// (senão a aba que compartilha a tela capturaria o som da aba que assiste => retorno)
+const sameDevice = new Set();
+const bc = 'BroadcastChannel' in window ? new BroadcastChannel('live-sitevision') : null;
+const announce = (t) => room && bc?.postMessage({ t, room: room.name, id: room.localParticipant.identity });
+bc && (bc.onmessage = ({ data }) => {
+  if (!room || data.room !== room.name || data.id === room.localParticipant.identity) return;
+  if (data.t === 'bye') sameDevice.delete(data.id);
+  else {
+    if (!sameDevice.has(data.id)) { sameDevice.add(data.id); if (data.t === 'hello') announce('here'); toast('Outra aba sua está nesta sala: o som dela fica mudo aqui para não dar retorno'); }
+  }
+  render();
+});
+
 $('joinForm').addEventListener('submit', (e) => {
   e.preventDefault();
   joinRoom($('name').value.trim(), $('room').value.trim());
@@ -55,6 +69,7 @@ async function joinRoom(name, roomName) {
 
     history.replaceState(null, '', `?sala=${encodeURIComponent(roomName)}`);
     $('roomName').textContent = roomName;
+    announce('hello');
     const others = [...room.remoteParticipants.values()].map((p) => p.name || p.identity);
     setTimeout(() => toast(others.length ? `Você entrou. Na sala: ${others.join(', ')}` : 'Você entrou. Por enquanto só você está na sala'), 300);
     $('join').hidden = true;
@@ -135,7 +150,7 @@ $('btnCopy').onclick = () => navigator.clipboard.writeText(location.href);
 $('btnLeave').onclick = () => { leaving = true; room?.disconnect(); };
 
 // Fechou a aba/navegador: sai da chamada na hora (não espera o servidor perceber)
-const bye = () => { unloading = true; try { room?.disconnect(true); } catch {} };
+const bye = () => { unloading = true; announce('bye'); try { room?.disconnect(true); } catch {} };
 window.addEventListener('pagehide', bye);
 window.addEventListener('beforeunload', bye);
 
@@ -172,6 +187,7 @@ function renderUsers() {
     nm.className = 'nm';
     nm.textContent = name;
     if (p.isLocal) { const s = document.createElement('small'); s.textContent = ' (você)'; nm.append(s); }
+    else if (sameDevice.has(p.identity)) { const s = document.createElement('small'); s.textContent = ' (sua outra aba)'; nm.append(s); }
     const st = document.createElement('span');
     st.className = 'st';
     if (p.getTrackPublication(Track.Source.ScreenShare)) st.insertAdjacentHTML('beforeend', '<span class="badge">TELA</span>');
@@ -195,7 +211,7 @@ function render() {
     for (const pub of p.trackPublications.values()) {
       const t = pub.track;
       if (!t || pub.isMuted) continue;
-      if (t.kind === 'audio' && p.isLocal) continue;
+      if (t.kind === 'audio' && (p.isLocal || sameDevice.has(p.identity))) continue; // nunca tocar o próprio som nem o de outra aba sua
       const key = `${p.identity}:${pub.trackSid}`;
       want.add(key);
       if (tiles.has(key)) continue;
@@ -223,6 +239,7 @@ function render() {
   for (const [key, node] of tiles) {
     if (want.has(key)) continue;
     if (manualPin === key) manualPin = null;
+    if (node instanceof HTMLMediaElement) { node.pause(); node.srcObject = null; }
     node.querySelectorAll?.('video').forEach((v) => v.srcObject = null);
     node.remove();
     tiles.delete(key);
