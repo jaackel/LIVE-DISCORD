@@ -4,38 +4,62 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="google" content="notranslate">
+<meta name="theme-color" content="#0b0d12">
 <title>Live Sitevision</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main id="join">
   <form id="joinForm">
-    <h1>Live</h1>
-    <label>Seu nome <input id="name" required maxlength="40" autocomplete="name"></label>
+    <div class="logo"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="3"/><path d="m16 10 6-3v10l-6-3"/></svg></div>
+    <h1>Entrar na live</h1>
+    <p class="sub">Sem cadastro. Digite seu nome e a sala, e pronto.</p>
+    <label>Seu nome <input id="name" required maxlength="40" autocomplete="name" placeholder="Como quer aparecer"></label>
     <label>Sala <input id="room" required maxlength="60" placeholder="ex: reuniao"></label>
-    <button>Entrar</button>
+    <button class="primary">Entrar</button>
     <p class="err" id="joinErr"></p>
   </form>
 </main>
 
 <section id="stage" hidden>
+  <header id="top">
+    <div class="brand"><span class="dot"></span><span id="roomName"></span></div>
+    <button id="btnCopy" class="ghost" title="Copiar link da sala">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      <span>Copiar link</span>
+    </button>
+  </header>
+
   <div id="main">
     <div id="grid"></div>
     <aside id="users"><h2>Na sala <span id="count"></span></h2><ul id="userList"></ul></aside>
   </div>
+
   <footer id="bar">
-    <button id="btnMic">Microfone</button>
-    <button id="btnCam">Câmera</button>
-    <button id="btnScreen">Compartilhar tela</button>
-    <label>Qualidade da tela
+    <button id="btnMic" class="ctl-btn" title="Microfone">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>
+      <span>Microfone</span>
+    </button>
+    <button id="btnCam" class="ctl-btn" title="Câmera">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="3"/><path d="m16 10 6-3v10l-6-3"/></svg>
+      <span>Câmera</span>
+    </button>
+    <button id="btnScreen" class="ctl-btn" title="Compartilhar tela">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      <span>Compartilhar tela</span>
+    </button>
+    <label class="qual">
+      <span>Qualidade da tela</span>
       <select id="quality">
-        <option value="eco">Econômica (720p · 15fps)</option>
-        <option value="balanced" selected>Equilibrada (1080p · 30fps)</option>
-        <option value="max">Máxima (resolução original · 60fps)</option>
+        <option value="eco">Econômica · 720p 15fps</option>
+        <option value="balanced" selected>Equilibrada · 1080p 30fps</option>
+        <option value="max">Máxima · 4K 60fps</option>
       </select>
     </label>
-    <button id="btnCopy">Copiar link</button>
-    <button id="btnLeave" class="danger">Sair</button>
+    <button id="btnLeave" class="ctl-btn danger" title="Sair da sala">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      <span>Sair</span>
+    </button>
   </footer>
 </section>
 <script src="/vendor/livekit-client.js"></script>

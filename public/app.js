@@ -47,6 +47,7 @@ $('joinForm').addEventListener('submit', async (e) => {
     await room.connect(`${location.origin.replace(/^http/, 'ws')}`, token);
 
     history.replaceState(null, '', `?sala=${encodeURIComponent(roomName)}`);
+    $('roomName').textContent = roomName;
     $('join').hidden = true;
     $('stage').hidden = false;
     render();
@@ -117,27 +118,42 @@ window.addEventListener('beforeunload', bye);
 
 function leave() { location.href = location.pathname; }
 
+const SVG = {
+  mic: '<path d="M5 11a7 7 0 0 0 14 0M12 18v4"/><rect x="9" y="2" width="6" height="12" rx="3"/>',
+  micOff: '<path d="m2 2 20 20M9 9v2a3 3 0 0 0 5.1 2.1M15 9.3V5a3 3 0 0 0-5.9-.7M19 11a7 7 0 0 1-.9 3.4M5 11a7 7 0 0 0 11 5.7M12 18v4"/>',
+  cam: '<rect x="2" y="6" width="14" height="12" rx="3"/><path d="m16 10 6-3v10l-6-3"/>',
+  camOff: '<path d="m2 2 20 20M16 16v1a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h1m5 0h2a3 3 0 0 1 3 3v2l6-3v10"/>',
+};
+const ico = (k, on) => `<svg class="${on ? '' : 'off'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${SVG[k]}</svg>`;
+const hue = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+
 function renderUsers() {
   const all = [room.localParticipant, ...room.remoteParticipants.values()];
-  $('count').textContent = `(${all.length})`;
+  $('count').textContent = `· ${all.length}`;
   const ul = $('userList');
   ul.replaceChildren();
   for (const p of all) {
+    const name = p.name || p.identity;
     const li = document.createElement('li');
     if (p.isSpeaking) li.className = 'speaking';
+    const av = document.createElement('div');
+    av.className = 'av';
+    av.textContent = name.trim().charAt(0).toUpperCase() || '?';
+    av.style.background = `linear-gradient(135deg,hsl(${hue(name)} 70% 55%),hsl(${(hue(name) + 40) % 360} 70% 45%))`;
     const nm = document.createElement('span');
     nm.className = 'nm';
-    nm.textContent = (p.name || p.identity) + (p.isLocal ? ' (você)' : '');
-    li.append(nm);
-    const icon = (txt, on) => { const s = document.createElement('span'); s.className = 'ic ' + (on ? 'live' : 'off'); s.textContent = txt; return s; };
-    const sharing = p.getTrackPublication(Track.Source.ScreenShare);
-    if (sharing) li.append(icon('tela', true));
-    li.append(icon('mic', p.isMicrophoneEnabled), icon('cam', p.isCameraEnabled));
+    nm.textContent = name;
+    if (p.isLocal) { const s = document.createElement('small'); s.textContent = ' (você)'; nm.append(s); }
+    const st = document.createElement('span');
+    st.className = 'st';
+    if (p.getTrackPublication(Track.Source.ScreenShare)) st.insertAdjacentHTML('beforeend', '<span class="badge">TELA</span>');
+    st.insertAdjacentHTML('beforeend', ico(p.isMicrophoneEnabled ? 'mic' : 'micOff', p.isMicrophoneEnabled) + ico(p.isCameraEnabled ? 'cam' : 'camOff', p.isCameraEnabled));
+    li.append(av, nm, st);
     ul.append(li);
   }
 }
 
-const tiles = new Map(); // chave -> elemento (video ficam vivos entre renders)
+const tiles = new Map(); // chave -> elemento (vídeos ficam vivos entre renders)
 
 function render() {
   renderUsers();
