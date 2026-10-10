@@ -13,9 +13,20 @@ button.on{background:#2b8a5b}
 button.danger{background:var(--bad)}
 .err{color:var(--bad);margin:0;min-height:1em;font-size:14px}
 #stage{display:flex;flex-direction:column;height:100%}
+#main{flex:1;display:flex;min-height:0}
 #grid{flex:1;display:grid;gap:8px;padding:8px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));grid-auto-rows:1fr;min-height:0}
 .tile{position:relative;background:#000;border-radius:10px;overflow:hidden;min-height:0}
 .tile video{width:100%;height:100%;object-fit:contain;background:#000}
 .tile.screen{grid-column:1/-1}
 .tile .tag{position:absolute;left:8px;bottom:8px;background:#000a;padding:3px 8px;border-radius:6px;font-size:13px}
 #bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;justify-content:center;padding:10px;background:var(--card)}
+#users{width:220px;background:var(--card);padding:12px;overflow:auto;border-left:1px solid #2a2f3a}
+#users h2{margin:0 0 10px;font-size:14px;color:var(--mut);font-weight:600}
+#userList{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+#userList li{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:#0f1115;border:2px solid transparent}
+#userList li.speaking{border-color:#2b8a5b}
+#userList .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#userList .ic{font-size:12px;color:var(--mut)}
+#userList .ic.live{color:#2b8a5b}
+#userList .ic.off{text-decoration:line-through}
+@media(max-width:700px){#main{flex-direction:column}#users{width:auto;max-height:28%;border-left:0;border-top:1px solid #2a2f3a}}

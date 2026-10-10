@@ -38,6 +38,7 @@ $('joinForm').addEventListener('submit', async (e) => {
     room.on(RoomEvent.ParticipantDisconnected, render);
     room.on(RoomEvent.TrackMuted, render);
     room.on(RoomEvent.TrackUnmuted, render);
+    room.on(RoomEvent.ActiveSpeakersChanged, renderUsers);
     room.on(RoomEvent.Disconnected, leave);
     await room.connect(`${location.origin.replace(/^http/, 'ws')}`, token);
 
@@ -104,7 +105,28 @@ $('btnLeave').onclick = () => room?.disconnect();
 
 function leave() { location.href = location.pathname; }
 
+function renderUsers() {
+  const all = [room.localParticipant, ...room.remoteParticipants.values()];
+  $('count').textContent = `(${all.length})`;
+  const ul = $('userList');
+  ul.replaceChildren();
+  for (const p of all) {
+    const li = document.createElement('li');
+    if (p.isSpeaking) li.className = 'speaking';
+    const nm = document.createElement('span');
+    nm.className = 'nm';
+    nm.textContent = (p.name || p.identity) + (p.isLocal ? ' (você)' : '');
+    li.append(nm);
+    const icon = (txt, on) => { const s = document.createElement('span'); s.className = 'ic ' + (on ? 'live' : 'off'); s.textContent = txt; return s; };
+    const sharing = p.getTrackPublication(Track.Source.ScreenShare);
+    if (sharing) li.append(icon('tela', true));
+    li.append(icon('mic', p.isMicrophoneEnabled), icon('cam', p.isCameraEnabled));
+    ul.append(li);
+  }
+}
+
 function render() {
+  renderUsers();
   const grid = $('grid');
   grid.replaceChildren();
   const all = [room.localParticipant, ...room.remoteParticipants.values()];
