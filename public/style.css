@@ -30,7 +30,7 @@ button.danger{background:var(--bad)}
 #userList .ic.off{text-decoration:line-through}
 @media(max-width:700px){#main{flex-direction:column}#users{width:auto;max-height:28%;border-left:0;border-top:1px solid #2a2f3a}}
 #toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#000c;padding:8px 14px;border-radius:8px;font-size:14px;z-index:9}
-#grid.pinned{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));grid-template-rows:minmax(0,1fr);grid-auto-rows:110px}
+#grid.pinned{grid-template-columns:repeat(auto-fill,192px);justify-content:center;grid-template-rows:minmax(0,1fr);grid-auto-rows:108px}
 .tile.pin{grid-column:1/-1;order:-1}
 .tile.fit-cover video{object-fit:cover}
 .tile.fit-real{overflow:auto}
