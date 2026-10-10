@@ -159,7 +159,10 @@ function render() {
       tag.textContent = `${p.name || p.identity}${isScreen ? ' · tela' : ''}`;
       tile.dataset.key = key;
       if (isScreen) tile.dataset.screen = '1';
-      tile.append(el, tag, controls(tile, el));
+      const view = document.createElement('div');
+      view.className = 'view';
+      view.append(el);
+      tile.append(view, tag, controls(tile));
       el.addEventListener('dblclick', () => toggleFullscreen(tile));
       tiles.set(key, tile);
       grid.append(tile);
@@ -183,7 +186,7 @@ function toggleFullscreen(tile) {
   else tile.requestFullscreen?.().catch(() => {});
 }
 
-function controls(tile, video) {
+function controls(tile) {
   const box = document.createElement('div');
   box.className = 'ctl';
   const btn = (txt, fn) => { const b = document.createElement('button'); b.textContent = txt; b.onclick = (e) => { e.stopPropagation(); fn(b); }; return b; };
@@ -197,7 +200,20 @@ function controls(tile, video) {
   const pinBtn = btn('Fixar', () => { manualPin = manualPin === tile.dataset.key ? null : tile.dataset.key; updateLayout(); });
   pinBtn.className = 'pinbtn';
   const fsBtn = btn('Tela cheia', () => toggleFullscreen(tile));
-  box.append(fitBtn, pinBtn, fsBtn);
+  const ZOOMS = [1, 1.25, 1.5, 2, 3, 4];
+  let zi = 0;
+  const zl = document.createElement('span');
+  zl.className = 'z'; zl.textContent = '100%';
+  const setZoom = (i) => {
+    zi = Math.max(0, Math.min(ZOOMS.length - 1, i));
+    tile.style.setProperty('--z', ZOOMS[zi]);
+    tile.classList.toggle('zoomed', zi > 0);
+    zl.textContent = Math.round(ZOOMS[zi] * 100) + '%';
+  };
+  const minus = btn('−', () => setZoom(zi - 1));
+  const plus = btn('+', () => setZoom(zi + 1));
+  minus.title = 'Diminuir'; plus.title = 'Aumentar';
+  box.append(minus, zl, plus, fitBtn, pinBtn, fsBtn);
   return box;
 }
 

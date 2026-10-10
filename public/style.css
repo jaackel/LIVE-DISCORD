@@ -16,6 +16,7 @@ button.danger{background:var(--bad)}
 #main{flex:1;display:flex;min-height:0;min-width:0}
 #grid{flex:1;display:grid;gap:8px;padding:8px;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));grid-auto-rows:minmax(0,1fr);min-height:0;min-width:0;overflow:hidden}
 .tile{position:relative;background:#000;border-radius:10px;overflow:hidden;min-height:0;min-width:0}
+.tile .view{position:absolute;inset:0;overflow:hidden}
 .tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
 .tile .tag{position:absolute;left:8px;bottom:8px;background:#000a;padding:3px 8px;border-radius:6px;font-size:13px}
 #bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;justify-content:center;padding:10px;background:var(--card)}
@@ -33,11 +34,11 @@ button.danger{background:var(--bad)}
 #grid.pinned{grid-template-columns:repeat(auto-fill,192px);justify-content:center;grid-template-rows:minmax(0,1fr);grid-auto-rows:108px}
 .tile.pin{grid-column:1/-1;order:-1}
 .tile.fit-cover video{object-fit:cover}
-.tile.fit-real{overflow:auto}
+.tile.fit-real .view,.tile.zoomed .view{overflow:auto}
 .tile.fit-real video{position:static;width:auto;height:auto;max-width:none;object-fit:none}
+.tile.zoomed video{position:static;width:calc(var(--z)*100%);height:calc(var(--z)*100%);max-width:none;object-fit:contain}
 .tile:fullscreen{border-radius:0}
-.tile .ctl{position:absolute;top:8px;right:8px;display:flex;gap:6px;opacity:0;transition:opacity .15s;z-index:2}
-.tile:hover .ctl,.tile:focus-within .ctl{opacity:1}
-@media(hover:none){.tile .ctl{opacity:1}}
-.ctl button{padding:4px 8px;font-size:12px;background:#000b}
+.tile .ctl{position:absolute;top:8px;right:8px;display:flex;gap:6px;opacity:.92;z-index:2;background:#000a;padding:4px;border-radius:8px}
+.ctl button{padding:6px 10px;font-size:13px;background:#2a2f3a}
+.ctl .z{min-width:48px;text-align:center;align-self:center;font-size:13px}
 .ctl button.act{background:var(--acc)}
