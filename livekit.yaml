@@ -4,7 +4,6 @@ rtc:
   tcp_port: 7881          # fallback TCP
   udp_port: 7882          # mídia: UMA porta UDP só (facilita firewall)
   use_external_ip: false
-  node_ip: ${NODE_IP}
   # sem reduzir banda: não limita bitrate do lado do servidor
 room:
   auto_create: true

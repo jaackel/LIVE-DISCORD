@@ -39,8 +39,10 @@ app.post('/api/token', async (req, res) => {
   const room = clean(req.body?.room, 60).toLowerCase().replace(/ +/g, '-');
   if (!name || !room) return res.status(400).json({ error: 'nome e sala são obrigatórios' });
 
+  // clientId fixo por aba: reconectar/atualizar a página substitui a sessão antiga em vez de duplicar
+  const cid = /^[a-f0-9]{8,32}$/.test(req.body?.clientId) ? req.body.clientId : randomBytes(4).toString('hex');
   const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-    identity: `${name}-${randomBytes(3).toString('hex')}`,
+    identity: `${cid}`,
     name,
     ttl: '8h',
   });

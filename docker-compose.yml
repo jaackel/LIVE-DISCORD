@@ -1,7 +1,7 @@
 name: live-sitevision
 services:
   livekit:
-    image: livekit/livekit-server:v1.8
+    image: livekit/livekit-server:v1.13.9
     command: --config /etc/livekit.yaml --node-ip ${NODE_IP}
     network_mode: host          # WebRTC precisa das portas reais do host
     restart: unless-stopped

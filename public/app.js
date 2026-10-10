@@ -13,6 +13,8 @@ $('room').value = params.get('sala') || '';
 $('name').value = localStorage.getItem('live:nome') || '';
 
 let room = null;
+let clientId = sessionStorage.getItem('live:cid');
+if (!clientId) { clientId = [...crypto.getRandomValues(new Uint8Array(6))].map((b) => b.toString(16).padStart(2, '0')).join(''); sessionStorage.setItem('live:cid', clientId); }
 let sharing = false;
 
 $('joinForm').addEventListener('submit', async (e) => {
@@ -24,7 +26,7 @@ $('joinForm').addEventListener('submit', async (e) => {
     localStorage.setItem('live:nome', name);
     const r = await fetch('/api/token', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, room: roomName }),
+      body: JSON.stringify({ name, room: roomName, clientId }),
     });
     if (!r.ok) throw new Error((await r.json()).error || 'falha ao entrar');
     const { token } = await r.json();
@@ -38,6 +40,8 @@ $('joinForm').addEventListener('submit', async (e) => {
     room.on(RoomEvent.ParticipantDisconnected, render);
     room.on(RoomEvent.TrackMuted, render);
     room.on(RoomEvent.TrackUnmuted, render);
+    room.on(RoomEvent.Reconnecting, () => toast('Reconectando...'));
+    room.on(RoomEvent.Reconnected, () => toast('Conexão restabelecida'));
     room.on(RoomEvent.ActiveSpeakersChanged, renderUsers);
     room.on(RoomEvent.Disconnected, leave);
     await room.connect(`${location.origin.replace(/^http/, 'ws')}`, token);
@@ -54,15 +58,18 @@ $('joinForm').addEventListener('submit', async (e) => {
 function setBtn(id, on) { $(id).classList.toggle('on', on); $(id).classList.toggle('off', !on); }
 
 $('btnMic').onclick = async () => {
-  const on = !room.localParticipant.isMicrophoneEnabled;
-  await room.localParticipant.setMicrophoneEnabled(on, { echoCancellation: true, noiseSuppression: true });
-  setBtn('btnMic', on);
+  try {
+    const on = !room.localParticipant.isMicrophoneEnabled;
+    await room.localParticipant.setMicrophoneEnabled(on, { echoCancellation: true, noiseSuppression: true });
+    setBtn('btnMic', on);
+  } catch (err) { toast('Microfone: ' + (err.message || err)); }
 };
 $('btnCam').onclick = async () => {
-  const on = !room.localParticipant.isCameraEnabled;
-  await room.localParticipant.setCameraEnabled(on, { resolution: VideoPresets.h720.resolution },
-    { videoEncoding: { maxBitrate: 2_000_000, maxFramerate: 30 } });
-  setBtn('btnCam', on);
+  try {
+    const on = !room.localParticipant.isCameraEnabled;
+    await room.localParticipant.setCameraEnabled(on, { resolution: VideoPresets.h720.resolution });
+    setBtn('btnCam', on);
+  } catch (err) { toast('Câmera: ' + (err.message || err)); }
 };
 
 $('btnScreen').onclick = async () => {
@@ -81,7 +88,7 @@ $('btnScreen').onclick = async () => {
       degradationPreference: 'maintain-resolution',
     });
     sharing = true; setBtn('btnScreen', true);
-  } catch (err) { console.warn(err); }
+  } catch (err) { if (err?.name !== 'NotAllowedError') toast('Tela: ' + (err.message || err)); }
 };
 
 // Trocar a qualidade durante a transmissão, sem pedir a tela de novo
@@ -125,30 +132,49 @@ function renderUsers() {
   }
 }
 
+const tiles = new Map(); // chave -> elemento (video ficam vivos entre renders)
+
 function render() {
   renderUsers();
   const grid = $('grid');
-  grid.replaceChildren();
+  const want = new Set();
   const all = [room.localParticipant, ...room.remoteParticipants.values()];
   for (const p of all) {
     for (const pub of p.trackPublications.values()) {
       const t = pub.track;
       if (!t || pub.isMuted) continue;
-      if (t.kind === 'audio') {
-        if (p.isLocal) continue;
-        const a = t.attach(); a.hidden = true; grid.append(a); continue;
-      }
-      const tile = document.createElement('div');
+      if (t.kind === 'audio' && p.isLocal) continue;
+      const key = `${p.identity}:${pub.trackSid}`;
+      want.add(key);
+      if (tiles.has(key)) continue;
       const isScreen = pub.source === Track.Source.ScreenShare;
+      const el = t.attach();
+      if (t.kind === 'audio') { el.hidden = true; tiles.set(key, el); grid.append(el); continue; }
+      const tile = document.createElement('div');
       tile.className = 'tile' + (isScreen ? ' screen' : '');
-      const v = t.attach(); v.autoplay = true; v.playsInline = true; v.muted = p.isLocal;
-      if (p.isLocal && !isScreen) v.style.transform = 'scaleX(-1)';
+      el.autoplay = true; el.playsInline = true; el.muted = p.isLocal;
+      if (p.isLocal && !isScreen) el.style.transform = 'scaleX(-1)';
       const tag = document.createElement('span');
       tag.className = 'tag';
       tag.textContent = `${p.name || p.identity}${isScreen ? ' · tela' : ''}`;
-      tile.append(v, tag);
+      tile.append(el, tag);
+      tiles.set(key, tile);
       grid.append(tile);
     }
   }
+  for (const [key, node] of tiles) {
+    if (want.has(key)) continue;
+    node.querySelectorAll?.('video').forEach((v) => v.srcObject = null);
+    node.remove();
+    tiles.delete(key);
+  }
+}
+
+let toastTimer;
+function toast(msg) {
+  let el = document.getElementById('toast');
+  if (!el) { el = document.createElement('div'); el.id = 'toast'; document.body.append(el); }
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.hidden = true), 4000);
 }
 setBtn('btnMic', false); setBtn('btnCam', false); setBtn('btnScreen', false);
