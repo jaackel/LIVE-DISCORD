@@ -8,6 +8,7 @@ rtc:
 room:
   auto_create: true
   empty_timeout: 300
+  departure_timeout: 5      # segundos até dar como saída quem sumiu sem avisar (padrão 20)
   max_participants: 30
 logging:
   level: info

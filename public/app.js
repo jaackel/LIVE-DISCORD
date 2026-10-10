@@ -110,6 +110,11 @@ $('quality').onchange = async () => {
 $('btnCopy').onclick = () => navigator.clipboard.writeText(location.href);
 $('btnLeave').onclick = () => room?.disconnect();
 
+// Fechou a aba/navegador: sai da chamada na hora (não espera o servidor perceber)
+const bye = () => { try { room?.disconnect(true); } catch {} };
+window.addEventListener('pagehide', bye);
+window.addEventListener('beforeunload', bye);
+
 function leave() { location.href = location.pathname; }
 
 function renderUsers() {
