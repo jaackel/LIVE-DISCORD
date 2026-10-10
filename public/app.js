@@ -13,15 +13,20 @@ $('room').value = params.get('sala') || '';
 $('name').value = localStorage.getItem('live:nome') || '';
 
 let room = null;
+let leaving = false;   // clicou em Sair de propósito
+let unloading = false; // a página está fechando/recarregando
 let clientId = sessionStorage.getItem('live:cid');
 if (!clientId) { clientId = [...crypto.getRandomValues(new Uint8Array(6))].map((b) => b.toString(16).padStart(2, '0')).join(''); sessionStorage.setItem('live:cid', clientId); }
 let sharing = false;
 
-$('joinForm').addEventListener('submit', async (e) => {
+$('joinForm').addEventListener('submit', (e) => {
   e.preventDefault();
+  joinRoom($('name').value.trim(), $('room').value.trim());
+});
+
+async function joinRoom(name, roomName) {
   $('joinErr').textContent = '';
-  const name = $('name').value.trim();
-  const roomName = $('room').value.trim();
+  $('joinForm').classList.add('busy');
   try {
     localStorage.setItem('live:nome', name);
     const r = await fetch('/api/token', {
@@ -36,25 +41,38 @@ $('joinForm').addEventListener('submit', async (e) => {
     room.on(RoomEvent.TrackUnsubscribed, render);
     room.on(RoomEvent.LocalTrackPublished, render);
     room.on(RoomEvent.LocalTrackUnpublished, render);
-    room.on(RoomEvent.ParticipantConnected, render);
-    room.on(RoomEvent.ParticipantDisconnected, render);
+    room.on(RoomEvent.ParticipantConnected, (p) => { toast(`${p.name || p.identity} entrou na sala`); render(); });
+    room.on(RoomEvent.ParticipantDisconnected, (p) => { toast(`${p.name || p.identity} saiu da sala`); render(); });
+    room.on(RoomEvent.ParticipantNameChanged, render);
     room.on(RoomEvent.TrackMuted, render);
     room.on(RoomEvent.TrackUnmuted, render);
     room.on(RoomEvent.Reconnecting, () => toast('Reconectando...'));
     room.on(RoomEvent.Reconnected, () => toast('Conexão restabelecida'));
     room.on(RoomEvent.ActiveSpeakersChanged, renderUsers);
+    room.on(RoomEvent.AudioPlaybackStatusChanged, () => { if (!room.canPlaybackAudio) toast('Clique em qualquer lugar da página para ativar o som'); });
     room.on(RoomEvent.Disconnected, leave);
     await room.connect(`${location.origin.replace(/^http/, 'ws')}`, token);
 
     history.replaceState(null, '', `?sala=${encodeURIComponent(roomName)}`);
     $('roomName').textContent = roomName;
+    const others = [...room.remoteParticipants.values()].map((p) => p.name || p.identity);
+    setTimeout(() => toast(others.length ? `Você entrou. Na sala: ${others.join(', ')}` : 'Você entrou. Por enquanto só você está na sala'), 300);
     $('join').hidden = true;
     $('stage').hidden = false;
     render();
   } catch (err) {
+    $('joinForm').classList.remove('busy');
+    $('join').hidden = false;
     $('joinErr').textContent = err.message;
   }
-});
+}
+
+// Atualizou a página já dentro de uma sala? Volta direto, sem pedir o nome de novo.
+{
+  const savedName = (localStorage.getItem('live:nome') || '').trim();
+  const savedRoom = (params.get('sala') || '').trim();
+  if (savedName && savedRoom) joinRoom(savedName, savedRoom);
+}
 
 function setBtn(id, on) { $(id).classList.toggle('on', on); $(id).classList.toggle('off', !on); }
 
@@ -108,15 +126,21 @@ $('quality').onchange = async () => {
   } catch (err) { console.warn('ajuste de qualidade:', err); }
 };
 
+document.addEventListener('click', () => room?.startAudio?.());
 $('btnCopy').onclick = () => navigator.clipboard.writeText(location.href);
-$('btnLeave').onclick = () => room?.disconnect();
+$('btnLeave').onclick = () => { leaving = true; room?.disconnect(); };
 
 // Fechou a aba/navegador: sai da chamada na hora (não espera o servidor perceber)
-const bye = () => { try { room?.disconnect(true); } catch {} };
+const bye = () => { unloading = true; try { room?.disconnect(true); } catch {} };
 window.addEventListener('pagehide', bye);
 window.addEventListener('beforeunload', bye);
 
-function leave() { location.href = location.pathname; }
+// Sair de propósito volta ao formulário; queda inesperada recarrega e reentra sozinho
+function leave() {
+  if (unloading) return;
+  if (leaving) location.href = location.pathname;
+  else location.reload();
+}
 
 const SVG = {
   mic: '<path d="M5 11a7 7 0 0 0 14 0M12 18v4"/><rect x="9" y="2" width="6" height="12" rx="3"/>',
@@ -153,12 +177,15 @@ function renderUsers() {
   }
 }
 
+setInterval(() => { if (room && !$('stage').hidden) { renderUsers(); updateEmpty(ensureEmpty()); } }, 3000);
+
 const tiles = new Map(); // chave -> elemento (vídeos ficam vivos entre renders)
 
 function render() {
   renderUsers();
   const grid = $('grid');
   const want = new Set();
+  const empty = ensureEmpty();
   const all = [room.localParticipant, ...room.remoteParticipants.values()];
   for (const p of all) {
     for (const pub of p.trackPublications.values()) {
@@ -197,6 +224,26 @@ function render() {
     tiles.delete(key);
   }
   updateLayout();
+  updateEmpty(empty);
+}
+
+function ensureEmpty() {
+  let e = document.getElementById('empty');
+  if (!e) { e = document.createElement('div'); e.id = 'empty'; $('grid').prepend(e); }
+  return e;
+}
+
+function updateEmpty(e) {
+  const hasTiles = [...tiles.values()].some((n) => n.classList?.contains('tile'));
+  e.hidden = hasTiles;
+  if (hasTiles) return;
+  const others = [...room.remoteParticipants.values()].map((p) => p.name || p.identity);
+  e.replaceChildren();
+  const h = document.createElement('strong');
+  const s = document.createElement('span');
+  if (!others.length) { h.textContent = 'Só você está na sala'; s.textContent = 'Copie o link no topo para convidar outras pessoas.'; }
+  else { h.textContent = others.length === 1 ? '1 outra pessoa na sala' : `${others.length} outras pessoas na sala`; s.textContent = others.join(', ') + ' — ninguém com câmera ou tela ligada.'; }
+  e.append(h, s);
 }
 
 let manualPin = null;
