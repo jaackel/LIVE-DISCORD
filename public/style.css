@@ -106,7 +106,7 @@ li.speaking .av{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ok)}
 #grid.pinned.dock-top #strip{order:1}#grid.pinned.dock-top #spot{order:2}
 #grid.pinned.dock-bottom #spot{order:1}#grid.pinned.dock-bottom #strip{order:2}
 #grid.pinned.dock-left,#grid.pinned.dock-right{flex-direction:row}
-#grid.pinned.dock-left #strip,#grid.pinned.dock-right #strip{flex-direction:column;flex-wrap:nowrap;width:204px;overflow-y:auto;align-content:stretch;justify-content:flex-start}
+#grid.pinned.dock-left #strip,#grid.pinned.dock-right #strip{flex-direction:column;flex-wrap:nowrap;width:auto;max-width:45%;overflow-y:auto;align-content:stretch;justify-content:flex-start}
 #grid.pinned.dock-left #strip{order:1}#grid.pinned.dock-left #spot{order:2}
 #grid.pinned.dock-right #spot{order:1}#grid.pinned.dock-right #strip{order:2}
 #grid.pinned.dock-float #strip{display:contents}
@@ -119,3 +119,14 @@ li.speaking .av{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ok)}
 .seg button.act{background:var(--acc);color:#fff}
 @media(max-width:900px){.seg span{display:none}}
 @media(max-width:760px){#dock{display:none}}
+
+#grid.pinned.dock-top #strip,#grid.pinned.dock-bottom #strip{max-height:45%;overflow-y:auto}
+.szctl{position:absolute;top:6px;left:6px;z-index:3;display:none;gap:2px;background:#0b0d12cc;backdrop-filter:blur(8px);padding:2px;border-radius:9px;border:1px solid #ffffff14;opacity:0;transition:opacity .15s}
+.szctl button{width:24px;height:22px;padding:0;font-size:15px;line-height:1;background:transparent;color:var(--fg);border-radius:6px}
+.szctl button:hover{background:#ffffff22}
+#grid.pinned .tile:not(.pin) .szctl{display:flex}
+.tile:hover .szctl,.tile:focus-within .szctl{opacity:1}
+@media(hover:none){.szctl{opacity:1}}
+#btnSound.off{opacity:.55}
+#btnSound.off svg{opacity:.5}
+@media(max-width:900px){#btnSound span{display:none}}

@@ -19,6 +19,42 @@ let clientId = sessionStorage.getItem('live:cid');
 if (!clientId) { clientId = [...crypto.getRandomValues(new Uint8Array(6))].map((b) => b.toString(16).padStart(2, '0')).join(''); sessionStorage.setItem('live:cid', clientId); }
 let sharing = false;
 
+// ---------- sons estilo Discord (sintetizados, sem arquivos) ----------
+let soundsOn = localStorage.getItem('live:sons') !== '0';
+let actx = null;
+function audioCtx() {
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; } }
+  if (actx.state === 'suspended') actx.resume().catch(() => {});
+  return actx;
+}
+document.addEventListener('pointerdown', audioCtx);
+document.addEventListener('keydown', audioCtx);
+const SOUNDS = {
+  join:        [[440, 0, .11, 'sine'], [587, .1, .16, 'sine']],
+  leave:       [[587, 0, .11, 'sine'], [392, .1, .18, 'sine']],
+  me:          [[523, 0, .1, 'sine'], [659, .09, .1, 'sine'], [784, .18, .2, 'sine']],
+  streamStart: [[523, 0, .09, 'triangle'], [659, .08, .09, 'triangle'], [880, .16, .18, 'triangle']],
+  streamStop:  [[880, 0, .09, 'triangle'], [659, .08, .09, 'triangle'], [523, .16, .18, 'triangle']],
+};
+function playSound(kind) {
+  if (!soundsOn) return;
+  const ctx = audioCtx();
+  if (!ctx || ctx.state !== 'running') return;
+  const t0 = ctx.currentTime + 0.02;
+  for (const [f, at, dur, type] of SOUNDS[kind]) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t0 + at);
+    g.gain.exponentialRampToValueAtTime(0.16, t0 + at + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
+    o.connect(g).connect(ctx.destination);
+    o.start(t0 + at); o.stop(t0 + at + dur + 0.05);
+  }
+}
+const markSound = () => { $('btnSound').classList.toggle('off', !soundsOn); };
+$('btnSound').onclick = () => { soundsOn = !soundsOn; try { localStorage.setItem('live:sons', soundsOn ? '1' : '0'); } catch {} markSound(); if (soundsOn) playSound('me'); };
+markSound();
+
 // Abas do mesmo navegador/computador na mesma sala: uma não toca o som da outra
 // (senão a aba que compartilha a tela capturaria o som da aba que assiste => retorno)
 const sameDevice = new Set();
@@ -55,8 +91,10 @@ async function joinRoom(name, roomName) {
     room.on(RoomEvent.TrackUnsubscribed, render);
     room.on(RoomEvent.LocalTrackPublished, render);
     room.on(RoomEvent.LocalTrackUnpublished, render);
-    room.on(RoomEvent.ParticipantConnected, (p) => { toast(`${p.name || p.identity} entrou na sala`); render(); });
-    room.on(RoomEvent.ParticipantDisconnected, (p) => { toast(`${p.name || p.identity} saiu da sala`); render(); });
+    room.on(RoomEvent.ParticipantConnected, (p) => { toast(`${p.name || p.identity} entrou na sala`); playSound('join'); render(); });
+    room.on(RoomEvent.ParticipantDisconnected, (p) => { toast(`${p.name || p.identity} saiu da sala`); playSound('leave'); render(); });
+    room.on(RoomEvent.TrackPublished, (pub, p) => { if (pub.source === Track.Source.ScreenShare) { toast(`${p.name || p.identity} começou a transmitir`); playSound('streamStart'); } });
+    room.on(RoomEvent.TrackUnpublished, (pub, p) => { if (pub.source === Track.Source.ScreenShare && !p.isLocal) { toast(`${p.name || p.identity} parou de transmitir`); playSound('streamStop'); } });
     room.on(RoomEvent.ParticipantNameChanged, render);
     room.on(RoomEvent.TrackMuted, render);
     room.on(RoomEvent.TrackUnmuted, render);
@@ -70,6 +108,7 @@ async function joinRoom(name, roomName) {
     history.replaceState(null, '', `?sala=${encodeURIComponent(roomName)}`);
     $('roomName').textContent = roomName;
     announce('hello');
+    playSound('me');
     const others = [...room.remoteParticipants.values()].map((p) => p.name || p.identity);
     setTimeout(() => toast(others.length ? `Você entrou. Na sala: ${others.join(', ')}` : 'Você entrou. Por enquanto só você está na sala'), 300);
     $('join').hidden = true;
@@ -230,7 +269,8 @@ function render() {
       const view = document.createElement('div');
       view.className = 'view';
       view.append(el);
-      tile.append(view, tag, controls(tile));
+      tile.dataset.pid = p.identity;
+      tile.append(view, tag, controls(tile), sizeControls(tile));
       el.addEventListener('dblclick', () => toggleFullscreen(tile));
       tiles.set(key, tile);
       $('strip').append(tile);
@@ -310,6 +350,38 @@ function controls(tile) {
 const DOCKS = ['bottom', 'top', 'left', 'right', 'float'];
 let dock = localStorage.getItem('live:dock');
 if (!DOCKS.includes(dock)) dock = 'bottom';
+const SIZES = [120, 160, 192, 256, 320, 420, 520]; // largura das miniaturas (16:9)
+let camSizes = new Map();
+try { camSizes = new Map(JSON.parse(sessionStorage.getItem('live:camsizes') || '[]')); } catch {}
+const sizeOf = (pid) => SIZES[camSizes.get(pid) ?? 2];
+function applySize(n) {
+  const w = sizeOf(n.dataset.pid);
+  n.style.width = w + 'px'; n.style.height = Math.round(w * 9 / 16) + 'px';
+}
+function sizeControls(tile) {
+  const box = document.createElement('div');
+  box.className = 'szctl';
+  const step = (d) => {
+    const pid = tile.dataset.pid;
+    const i = Math.max(0, Math.min(SIZES.length - 1, (camSizes.get(pid) ?? 2) + d));
+    camSizes.set(pid, i);
+    try { sessionStorage.setItem('live:camsizes', JSON.stringify([...camSizes])); } catch {}
+    const w = SIZES[i], h = Math.round(w * 9 / 16);
+    if (tile.classList.contains('floating')) {
+      const p = floatPos.get(tile.dataset.key) || {};
+      floatPos.set(tile.dataset.key, { ...p, l: p.l ?? tile.offsetLeft, t: p.t ?? tile.offsetTop, w, h });
+      placeFloat(tile, tile.dataset.key);
+    } else applySize(tile);
+  };
+  for (const [txt, d, title] of [['−', -1, 'Câmera menor'], ['+', 1, 'Câmera maior']]) {
+    const b = document.createElement('button');
+    b.textContent = txt; b.title = title;
+    b.onclick = (e) => { e.stopPropagation(); step(d); };
+    box.append(b);
+  }
+  return box;
+}
+
 const floatPos = new Map(); // key -> {l,t,w,h} das câmeras flutuantes
 
 function updateLayout() {
@@ -325,7 +397,11 @@ function updateLayout() {
     n.classList.toggle('pin', isPin);
     const target = isPin ? $('spot') : $('strip');
     if (n.parentElement !== target) { target.append(n); n.querySelector('video')?.play().catch(() => {}); }
-    if (pinned && dock === 'float' && !isPin) placeFloat(n, k); else clearFloat(n);
+    if (pinned && dock === 'float' && !isPin) placeFloat(n, k);
+    else {
+      clearFloat(n);
+      if (pinned && !isPin) applySize(n); else Object.assign(n.style, { width: '', height: '' });
+    }
     const pb = n.querySelector('.pinbtn');
     if (pb) { pb.textContent = k === manualPin ? 'Desafixar' : 'Fixar'; pb.classList.toggle('act', k === manualPin); }
   }
@@ -337,7 +413,8 @@ function placeFloat(n, k) {
   let p = floatPos.get(k);
   if (!p) {
     const idx = [...g.querySelectorAll('.tile.floating')].indexOf(n);
-    p = { l: Math.max(8, g.clientWidth - 192 - 20), t: Math.max(8, g.clientHeight - (108 + 10) * (idx + 1) - 12), w: 192, h: 108 };
+    const w = sizeOf(n.dataset.pid), h = Math.round(w * 9 / 16);
+    p = { l: Math.max(8, g.clientWidth - w - 20), t: Math.max(8, g.clientHeight - (h + 10) * (idx + 1) - 12), w, h };
     floatPos.set(k, p);
   }
   Object.assign(n.style, { left: p.l + 'px', top: p.t + 'px', width: p.w + 'px', height: p.h + 'px' });
