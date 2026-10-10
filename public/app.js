@@ -233,7 +233,7 @@ function render() {
       tile.append(view, tag, controls(tile));
       el.addEventListener('dblclick', () => toggleFullscreen(tile));
       tiles.set(key, tile);
-      grid.append(tile);
+      $('strip').append(tile);
     }
   }
   for (const [key, node] of tiles) {
@@ -250,7 +250,7 @@ function render() {
 
 function ensureEmpty() {
   let e = document.getElementById('empty');
-  if (!e) { e = document.createElement('div'); e.id = 'empty'; $('grid').prepend(e); }
+  if (!e) { e = document.createElement('div'); e.id = 'empty'; $('strip').prepend(e); }
   return e;
 }
 
@@ -307,17 +307,79 @@ function controls(tile) {
 }
 
 // Destaque: o que a pessoa fixou; senão, a primeira tela compartilhada
+const DOCKS = ['bottom', 'top', 'left', 'right', 'float'];
+let dock = localStorage.getItem('live:dock');
+if (!DOCKS.includes(dock)) dock = 'bottom';
+const floatPos = new Map(); // key -> {l,t,w,h} das câmeras flutuantes
+
 function updateLayout() {
+  const list = [...tiles.entries()].filter(([, n]) => n.classList?.contains('tile'));
   let pin = manualPin && tiles.has(manualPin) ? manualPin : null;
-  if (!pin) for (const [k, n] of tiles) if (n.classList?.contains('tile') && n.dataset.screen) { pin = k; break; }
-  $('grid').classList.toggle('pinned', !!pin && [...tiles.values()].filter((n) => n.classList?.contains('tile')).length > 1);
-  for (const [k, n] of tiles) {
-    if (!n.classList?.contains('tile')) continue;
-    n.classList.toggle('pin', k === pin);
+  if (!pin) for (const [k, n] of list) if (n.dataset.screen) { pin = k; break; }
+  const pinned = !!pin && list.length > 1;
+  const grid = $('grid');
+  grid.classList.toggle('pinned', pinned);
+  for (const d of DOCKS) grid.classList.toggle('dock-' + d, d === dock);
+  for (const [k, n] of list) {
+    const isPin = pinned && k === pin;
+    n.classList.toggle('pin', isPin);
+    const target = isPin ? $('spot') : $('strip');
+    if (n.parentElement !== target) { target.append(n); n.querySelector('video')?.play().catch(() => {}); }
+    if (pinned && dock === 'float' && !isPin) placeFloat(n, k); else clearFloat(n);
     const pb = n.querySelector('.pinbtn');
     if (pb) { pb.textContent = k === manualPin ? 'Desafixar' : 'Fixar'; pb.classList.toggle('act', k === manualPin); }
   }
 }
+
+function placeFloat(n, k) {
+  n.classList.add('floating');
+  const g = $('grid');
+  let p = floatPos.get(k);
+  if (!p) {
+    const idx = [...g.querySelectorAll('.tile.floating')].indexOf(n);
+    p = { l: Math.max(8, g.clientWidth - 192 - 20), t: Math.max(8, g.clientHeight - (108 + 10) * (idx + 1) - 12), w: 192, h: 108 };
+    floatPos.set(k, p);
+  }
+  Object.assign(n.style, { left: p.l + 'px', top: p.t + 'px', width: p.w + 'px', height: p.h + 'px' });
+}
+function clearFloat(n) {
+  if (!n.classList.contains('floating')) return;
+  n.classList.remove('floating');
+  Object.assign(n.style, { left: '', top: '', width: '', height: '' });
+}
+
+// arrastar câmeras no modo flutuante (o canto inferior direito redimensiona)
+$('grid').addEventListener('pointerdown', (e) => {
+  const tile = e.target.closest?.('.tile.floating');
+  if (!tile || e.target.closest('.ctl') || e.button > 0) return;
+  const r = tile.getBoundingClientRect();
+  if (e.clientX > r.right - 18 && e.clientY > r.bottom - 18) return;
+  const g = $('grid').getBoundingClientRect();
+  const dx = e.clientX - r.left, dy = e.clientY - r.top;
+  tile.setPointerCapture(e.pointerId);
+  tile.style.cursor = 'grabbing';
+  const move = (ev) => {
+    tile.style.left = Math.min(Math.max(0, ev.clientX - g.left - dx), g.width - tile.offsetWidth) + 'px';
+    tile.style.top = Math.min(Math.max(0, ev.clientY - g.top - dy), g.height - tile.offsetHeight) + 'px';
+  };
+  const up = () => { tile.removeEventListener('pointermove', move); tile.removeEventListener('pointerup', up); tile.style.cursor = ''; };
+  tile.addEventListener('pointermove', move);
+  tile.addEventListener('pointerup', up);
+  e.preventDefault();
+});
+document.addEventListener('pointerup', () => {
+  for (const n of document.querySelectorAll('.tile.floating'))
+    floatPos.set(n.dataset.key, { l: n.offsetLeft, t: n.offsetTop, w: n.offsetWidth, h: n.offsetHeight });
+});
+
+function markDock() { document.querySelectorAll('#dock button').forEach((b) => b.classList.toggle('act', b.dataset.dock === dock)); }
+document.querySelectorAll('#dock button').forEach((b) => (b.onclick = () => {
+  dock = b.dataset.dock;
+  try { localStorage.setItem('live:dock', dock); } catch {}
+  markDock();
+  if (room) updateLayout();
+}));
+markDock();
 
 let toastTimer;
 function toast(msg) {

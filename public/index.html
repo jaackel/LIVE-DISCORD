@@ -24,6 +24,10 @@
 <section id="stage" hidden>
   <header id="top">
     <div class="brand"><span class="dot"></span><span id="roomName"></span></div>
+    <div id="dock" class="seg" title="Onde ficam as câmeras quando alguém está transmitindo a tela">
+      <span>Câmeras</span>
+      <button data-dock="bottom">Embaixo</button><button data-dock="top">Em cima</button><button data-dock="left">Esquerda</button><button data-dock="right">Direita</button><button data-dock="float">Flutuando</button>
+    </div>
     <button id="btnCopy" class="ghost" title="Copiar link da sala">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
       <span>Copiar link</span>
@@ -31,7 +35,7 @@
   </header>
 
   <div id="main">
-    <div id="grid"></div>
+    <div id="grid"><div id="spot"></div><div id="strip"></div></div>
     <aside id="users"><h2>Na sala <span id="count"></span></h2><ul id="userList"></ul></aside>
   </div>
 
