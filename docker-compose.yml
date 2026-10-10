@@ -1,0 +1,19 @@
+name: live-sitevision
+services:
+  livekit:
+    image: livekit/livekit-server:v1.8
+    command: --config /etc/livekit.yaml --node-ip ${NODE_IP}
+    network_mode: host          # WebRTC precisa das portas reais do host
+    restart: unless-stopped
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+  app:
+    build: .
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      PORT: 8086
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google" content="notranslate">
+<title>Live Sitevision</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="join">
+  <form id="joinForm">
+    <h1>Live</h1>
+    <label>Seu nome <input id="name" required maxlength="40" autocomplete="name"></label>
+    <label>Sala <input id="room" required maxlength="60" placeholder="ex: reuniao"></label>
+    <button>Entrar</button>
+    <p class="err" id="joinErr"></p>
+  </form>
+</main>
+
+<section id="stage" hidden>
+  <div id="grid"></div>
+  <footer id="bar">
+    <button id="btnMic">Microfone</button>
+    <button id="btnCam">Câmera</button>
+    <button id="btnScreen">Compartilhar tela</button>
+    <label>Qualidade da tela
+      <select id="quality">
+        <option value="eco">Econômica (720p · 15fps)</option>
+        <option value="balanced" selected>Equilibrada (1080p · 30fps)</option>
+        <option value="max">Máxima (resolução original · 60fps)</option>
+      </select>
+    </label>
+    <button id="btnCopy">Copiar link</button>
+    <button id="btnLeave" class="danger">Sair</button>
+  </footer>
+</section>
+<script src="/vendor/livekit-client.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

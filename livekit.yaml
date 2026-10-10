@@ -1,0 +1,14 @@
+port: 7880
+bind_addresses: ["127.0.0.1"]   # sinalização só local; o app faz o proxy
+rtc:
+  tcp_port: 7881          # fallback TCP
+  udp_port: 7882          # mídia: UMA porta UDP só (facilita firewall)
+  use_external_ip: false
+  node_ip: ${NODE_IP}
+  # sem reduzir banda: não limita bitrate do lado do servidor
+room:
+  auto_create: true
+  empty_timeout: 300
+  max_participants: 30
+logging:
+  level: info

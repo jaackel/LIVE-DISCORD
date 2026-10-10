@@ -1,0 +1,13 @@
+{
+  "name": "live-sitevision",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node server/index.js" },
+  "dependencies": {
+    "express": "^4.21.0",
+    "http-proxy": "^1.18.1",
+    "livekit-client": "^2.5.0",
+    "livekit-server-sdk": "^2.7.0"
+  }
+}
