@@ -13,11 +13,10 @@ button.on{background:#2b8a5b}
 button.danger{background:var(--bad)}
 .err{color:var(--bad);margin:0;min-height:1em;font-size:14px}
 #stage{display:flex;flex-direction:column;height:100%}
-#main{flex:1;display:flex;min-height:0}
-#grid{flex:1;display:grid;gap:8px;padding:8px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));grid-auto-rows:1fr;min-height:0}
-.tile{position:relative;background:#000;border-radius:10px;overflow:hidden;min-height:0}
-.tile video{width:100%;height:100%;object-fit:contain;background:#000}
-.tile.screen{grid-column:1/-1}
+#main{flex:1;display:flex;min-height:0;min-width:0}
+#grid{flex:1;display:grid;gap:8px;padding:8px;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));grid-auto-rows:minmax(0,1fr);min-height:0;min-width:0;overflow:hidden}
+.tile{position:relative;background:#000;border-radius:10px;overflow:hidden;min-height:0;min-width:0}
+.tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
 .tile .tag{position:absolute;left:8px;bottom:8px;background:#000a;padding:3px 8px;border-radius:6px;font-size:13px}
 #bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;justify-content:center;padding:10px;background:var(--card)}
 #users{width:220px;background:var(--card);padding:12px;overflow:auto;border-left:1px solid #2a2f3a}
@@ -31,3 +30,14 @@ button.danger{background:var(--bad)}
 #userList .ic.off{text-decoration:line-through}
 @media(max-width:700px){#main{flex-direction:column}#users{width:auto;max-height:28%;border-left:0;border-top:1px solid #2a2f3a}}
 #toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#000c;padding:8px 14px;border-radius:8px;font-size:14px;z-index:9}
+#grid.pinned{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));grid-template-rows:minmax(0,1fr);grid-auto-rows:110px}
+.tile.pin{grid-column:1/-1;order:-1}
+.tile.fit-cover video{object-fit:cover}
+.tile.fit-real{overflow:auto}
+.tile.fit-real video{position:static;width:auto;height:auto;max-width:none;object-fit:none}
+.tile:fullscreen{border-radius:0}
+.tile .ctl{position:absolute;top:8px;right:8px;display:flex;gap:6px;opacity:0;transition:opacity .15s;z-index:2}
+.tile:hover .ctl,.tile:focus-within .ctl{opacity:1}
+@media(hover:none){.tile .ctl{opacity:1}}
+.ctl button{padding:4px 8px;font-size:12px;background:#000b}
+.ctl button.act{background:var(--acc)}

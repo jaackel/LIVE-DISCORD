@@ -157,16 +157,60 @@ function render() {
       const tag = document.createElement('span');
       tag.className = 'tag';
       tag.textContent = `${p.name || p.identity}${isScreen ? ' · tela' : ''}`;
-      tile.append(el, tag);
+      tile.dataset.key = key;
+      if (isScreen) tile.dataset.screen = '1';
+      tile.append(el, tag, controls(tile, el));
+      el.addEventListener('dblclick', () => toggleFullscreen(tile));
       tiles.set(key, tile);
       grid.append(tile);
     }
   }
   for (const [key, node] of tiles) {
     if (want.has(key)) continue;
+    if (manualPin === key) manualPin = null;
     node.querySelectorAll?.('video').forEach((v) => v.srcObject = null);
     node.remove();
     tiles.delete(key);
+  }
+  updateLayout();
+}
+
+let manualPin = null;
+const FITS = [['contain', 'Ajustar'], ['cover', 'Preencher'], ['real', 'Tamanho real']];
+
+function toggleFullscreen(tile) {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else tile.requestFullscreen?.().catch(() => {});
+}
+
+function controls(tile, video) {
+  const box = document.createElement('div');
+  box.className = 'ctl';
+  const btn = (txt, fn) => { const b = document.createElement('button'); b.textContent = txt; b.onclick = (e) => { e.stopPropagation(); fn(b); }; return b; };
+  let fit = 0;
+  const fitBtn = btn(FITS[0][1], (b) => {
+    fit = (fit + 1) % FITS.length;
+    tile.classList.remove('fit-cover', 'fit-real');
+    if (FITS[fit][0] !== 'contain') tile.classList.add('fit-' + FITS[fit][0]);
+    b.textContent = FITS[fit][1];
+  });
+  const pinBtn = btn('Fixar', () => { manualPin = manualPin === tile.dataset.key ? null : tile.dataset.key; updateLayout(); });
+  pinBtn.className = 'pinbtn';
+  const fsBtn = btn('Tela cheia', () => toggleFullscreen(tile));
+  box.append(fitBtn, pinBtn, fsBtn);
+  return box;
+}
+
+// Destaque: o que a pessoa fixou; senão, a primeira tela compartilhada
+function updateLayout() {
+  let pin = manualPin && tiles.has(manualPin) ? manualPin : null;
+  if (!pin) for (const [k, n] of tiles) if (n.classList?.contains('tile') && n.dataset.screen) { pin = k; break; }
+  $('grid').classList.toggle('pinned', !!pin && [...tiles.values()].filter((n) => n.classList?.contains('tile')).length > 1);
+  for (const [k, n] of tiles) {
+    if (!n.classList?.contains('tile')) continue;
+    n.classList.toggle('pin', k === pin);
+    const pb = n.querySelector('.pinbtn');
+    if (pb) { pb.textContent = k === manualPin ? 'Desafixar' : 'Fixar'; pb.classList.toggle('act', k === manualPin); }
   }
 }
 
